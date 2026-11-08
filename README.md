@@ -10,6 +10,24 @@
 
 ![Baseline, repeat guard and edited policy side by side](docs/images/01-baseline-loop.png)
 
+## How it works
+
+```mermaid
+flowchart TD
+    A["Run baseline policy"] --> B["Failure trace"]
+    A -.-> G["Repeat-guard run<br/>comparison only"]
+    B --> C["Repair component<br/>trace + W2 slice"]
+    C --> D{"Patch valid?"}
+    D -- "no" --> X["Invalid proposal<br/>no edit applied"]
+    D -- "yes" --> E["Apply edit to a copy"]
+    E --> F["Independent verifier<br/>held-out + regression cases"]
+    F --> H{"All cases pass?"}
+    H -- "yes" --> OK["Accepted"]
+    H -- "no" --> NO["Rejected"]
+```
+
+The repeat guard is only a comparison run; it does not produce the repair. An edit can pass validation and still be rejected by verification. Details are in the [experiment document](docs/EXPERIMENT.md#flow).
+
 ## Results from the default run
 
 | Variant | What happened | Actions | Task completed? |
