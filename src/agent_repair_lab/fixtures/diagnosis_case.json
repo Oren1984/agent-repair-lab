@@ -1,0 +1,15 @@
+{
+  "_comment": "Diagnosis case. This is the only scenario whose trace the repair agent sees.",
+  "scenarios": [
+    {
+      "id": "diag-batch-J1042",
+      "role": "diagnosis",
+      "description": "Batch job that is running at the first check and ready from the second check on.",
+      "job_id": "J-1042",
+      "queue": "batch",
+      "ready_at_tick": 1,
+      "result_payload": "invoice-batch-1042: 318 rows, checksum 7f3a",
+      "expected_result": "invoice-batch-1042: 318 rows, checksum 7f3a"
+    }
+  ]
+}

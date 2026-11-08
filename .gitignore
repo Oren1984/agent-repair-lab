@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.env
+.env.*
+!.env.example
+reports/
+*.checkpoint
+*.npz

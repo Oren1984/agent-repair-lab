@@ -1,0 +1,45 @@
+{
+  "_comment": "Verification fixtures. Supplied directly to the verifier by the experiment runner; never passed to a repair agent. expected_result is declared by the fixture author, independently of any agent output.",
+  "scenarios": [
+    {
+      "id": "heldout-batch-J2077",
+      "role": "held_out_failure",
+      "description": "Same failure mechanism, different inputs: batch job already ready at the first check.",
+      "job_id": "J-2077",
+      "queue": "batch",
+      "ready_at_tick": 0,
+      "result_payload": "nightly-etl-2077: 4,912 rows, checksum c01d",
+      "expected_result": "nightly-etl-2077: 4,912 rows, checksum c01d"
+    },
+    {
+      "id": "regression-interactive-J3300",
+      "role": "regression",
+      "description": "Interactive job ready at the second check. The baseline completes it.",
+      "job_id": "J-3300",
+      "queue": "interactive",
+      "ready_at_tick": 1,
+      "result_payload": "report-3300.pdf (12 pages)",
+      "expected_result": "report-3300.pdf (12 pages)"
+    },
+    {
+      "id": "regression-interactive-slow-J3815",
+      "role": "regression",
+      "description": "Interactive job that needs four polls while running. The baseline waits correctly and completes it.",
+      "job_id": "J-3815",
+      "queue": "interactive",
+      "ready_at_tick": 4,
+      "result_payload": "thumbnail-set-3815: 64 images",
+      "expected_result": "thumbnail-set-3815: 64 images"
+    },
+    {
+      "id": "delayed-batch-J4105",
+      "role": "delayed_ready",
+      "description": "Batch job that stays running for three polls. Detects premature fetch_result calls.",
+      "job_id": "J-4105",
+      "queue": "batch",
+      "ready_at_tick": 3,
+      "result_payload": "model-eval-4105: accuracy 0.913",
+      "expected_result": "model-eval-4105: accuracy 0.913"
+    }
+  ]
+}

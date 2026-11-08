@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    image: agent-repair-lab:1.0
+    ports:
+      - "${AGENT_REPAIR_LAB_PORT:-8501}:8501"
+    environment:
+      # Optional local LLM mode only. The default demo never contacts it.
+      ARL_OLLAMA_URL: ${ARL_OLLAMA_URL:-http://host.docker.internal:11434}
+      ARL_OLLAMA_MODEL: ${ARL_OLLAMA_MODEL:-llama3.1}
+      ARL_OLLAMA_TIMEOUT: ${ARL_OLLAMA_TIMEOUT:-120}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

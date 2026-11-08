@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-repair-lab"
+version = "1.0.0"
+description = "One agent diagnoses another agent's loop, proposes a numeric weight repair, and an independent verifier decides."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Oren Salami" }]
+dependencies = [
+    "numpy>=1.26,<3",
+    "streamlit>=1.40,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+agent-repair-lab = "agent_repair_lab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"agent_repair_lab.fixtures" = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
