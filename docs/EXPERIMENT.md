@@ -2,7 +2,25 @@
 
 **Question:** Can one AI agent diagnose why another agent is stuck, propose a targeted numeric change to the neural policy driving it, and produce a repair that passes independent verification?
 
-This document describes what was built and what was observed in an actual local run on 2026-11-08 (Python 3.12, NumPy, Streamlit 1.60, Docker Desktop 29.9). All numbers below come from that run and are reproducible with `python -m agent_repair_lab`.
+This document describes what was built and what was observed in an actual local run on 2026-11-08 (Python 3.12, NumPy, Streamlit 1.60, Docker Desktop 29.9). All numbers below come from that run and are reproducible with `python -m agent_repair_lab`. For setup and day-to-day use, see the [usage guide](USAGE.md).
+
+## Flow
+
+```mermaid
+flowchart TD
+    A["Run baseline policy"] --> B["Failure trace"]
+    A -.-> G["Repeat-guard run<br/>comparison only"]
+    B --> C["Repair component<br/>trace + W2 slice"]
+    C --> D{"Patch valid?"}
+    D -- "no" --> X["Invalid proposal<br/>no edit applied"]
+    D -- "yes" --> E["Apply edit to a copy"]
+    E --> F["Independent verifier<br/>held-out + regression cases"]
+    F --> H{"All cases pass?"}
+    H -- "yes" --> OK["Accepted"]
+    H -- "no" --> NO["Rejected"]
+```
+
+The repeat-guard run uses the original policy and serves only as a comparison. It does not feed the repair component. A proposal can pass patch validation and still be **rejected** by behavioural verification, which is what happens to the `rebalance` negative control (section 6). A repair component that fails to produce a proposal, such as an unreachable LLM, ends the run before validation, with status `repair_failed`.
 
 ## 1. Task and environment
 
@@ -157,14 +175,14 @@ These are hand-crafted bad candidates, run through the same pipeline (`--source 
 
 ## 8. Sources and Inspiration
 
-1. **Primary research source.** Rikiya Takehi, Jayden Teoh, Alex Zhang, and Omar Khattab, *"Sparks of Weight-Space Programming: LLMs can natively read & write neural network weights,"* November 2026.
+1. **Primary research.** Rikiya Takehi, Jayden Teoh, Alex Zhang, and Omar Khattab, *"Sparks of Weight-Space Programming: LLMs can natively read & write neural network weights,"* November 2026.
    https://rikiyat.github.io/blog/weight-space-programming/
-2. **Video that inspired this project.** Code Cave, *"ניתוח מוח פתוח: מה קורה כש-AI מתקן את המוח של AI אחר?"*
+2. **Video inspiration.** Code Cave, *"ניתוח מוח פתוח: מה קורה כש-AI מתקן את המוח של AI אחר?"*
    https://www.youtube.com/watch?v=VAbXapGNveU
 
 **About the research.** The MIT CSAIL authors report preliminary results: they describe them as very early, and say capabilities are still limited. In their work, frontier LLMs read and edit neural-network weights directly, guided by natural-language goals and without gradient descent. Their experiments include identifying what small networks were trained on, repairing a control policy, and writing small networks from scratch. In one experiment, the authors report that editing about 0.016% of Qwen3.5-0.8B's weights, with a 50-forward-pass budget, raised MATH-500 from 7.9% to 48.1% and GSM8K from 13.8% to 67.1%. **These figures are the researchers' own results.** Agent Repair Lab neither reproduces nor tests them.
 
-**How this project differs.** Agent Repair Lab V1.0 is an independent toy-policy experiment. Its own measured results are those in sections 3–6 above, kept separate from the research figures. Its contribution is the **independent verification of proposed repairs**:
+**How this project differs.** Agent Repair Lab V1.0 is a separate small-policy experiment inspired by this research. Its own measured results are those in sections 3–6 above, kept separate from the research figures. Its contribution is the **independent verification of proposed repairs**:
 
 - a bounded patch schema with allowlisting and validation before mutation;
 - edits applied to an in-memory copy only;

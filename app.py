@@ -37,33 +37,36 @@ st.markdown(
     "An independent verifier decides whether it worked.**"
 )
 
-with st.container(border=True):
-    left, right = st.columns([3, 1])
-    with left:
-        label = st.selectbox("Repair agent", list(SOURCE_OPTIONS), index=0)
-        source = SOURCE_OPTIONS[label]
-        if source == "llm":
-            cfg = OllamaConfig.from_env()
-            st.info(
-                f"Optional local LLM mode. Endpoint `{cfg.url}`, model `{cfg.model}`, timeout {cfg.timeout:.0f}s "
-                "(set ARL_OLLAMA_URL / ARL_OLLAMA_MODEL). If Ollama is unavailable the failure is shown — "
-                "no deterministic result is substituted."
-            )
-        elif source.startswith("negative:"):
-            st.warning("Negative control: a hand-crafted bad patch used to show the verifier rejecting it.")
-    with right:
-        st.write("")
-        st.write("")
-        run_clicked = st.button("Run experiment", type="primary", use_container_width=True)
+tab_experiment, tab_help = st.tabs(["Experiment", "Help Center"])
 
-if run_clicked:
-    st.session_state.pop("report", None)  # never show an older run next to a new attempt
-    st.session_state["run_count"] = st.session_state.get("run_count", 0) + 1
-    with st.spinner("Running baseline, repair agent and verifier…"):
-        try:
-            st.session_state["report"] = run_experiment(source)
-        except Exception as exc:  # unexpected internal error: show it, keep nothing stale
-            st.session_state["report"] = {"internal_error": f"{type(exc).__name__}: {exc}"}
+with tab_experiment:
+    with st.container(border=True):
+        left, right = st.columns([3, 1])
+        with left:
+            label = st.selectbox("Repair agent", list(SOURCE_OPTIONS), index=0)
+            source = SOURCE_OPTIONS[label]
+            if source == "llm":
+                cfg = OllamaConfig.from_env()
+                st.info(
+                    f"Optional local LLM mode. Endpoint `{cfg.url}`, model `{cfg.model}`, timeout {cfg.timeout:.0f}s "
+                    "(set ARL_OLLAMA_URL / ARL_OLLAMA_MODEL). If Ollama is unavailable the failure is shown — "
+                    "no deterministic result is substituted."
+                )
+            elif source.startswith("negative:"):
+                st.warning("Negative control: a hand-crafted bad patch used to show the verifier rejecting it.")
+        with right:
+            st.write("")
+            st.write("")
+            run_clicked = st.button("Run experiment", type="primary", use_container_width=True)
+
+    if run_clicked:
+        st.session_state.pop("report", None)  # never show an older run next to a new attempt
+        st.session_state["run_count"] = st.session_state.get("run_count", 0) + 1
+        with st.spinner("Running baseline, repair agent and verifier…"):
+            try:
+                st.session_state["report"] = run_experiment(source)
+            except Exception as exc:  # unexpected internal error: show it, keep nothing stale
+                st.session_state["report"] = {"internal_error": f"{type(exc).__name__}: {exc}"}
 
 report = st.session_state.get("report")
 
@@ -209,10 +212,80 @@ def render(report: dict) -> None:
         )
 
 
-if report:
-    render(report)
-else:
-    st.info("Press **Run experiment** to reproduce the loop, propose a repair and verify it.")
+REPO_URL = "https://github.com/Oren1984/agent-repair-lab"
+RESEARCH_URL = "https://rikiyat.github.io/blog/weight-space-programming/"
+VIDEO_URL = "https://www.youtube.com/watch?v=VAbXapGNveU"
+
+
+def render_help() -> None:
+    """Static help text only: no experiment runs and no network calls happen here."""
+    st.subheader("Help Center")
+    st.caption("A short guide for using this demo live. Switching tabs keeps your latest result.")
+
+    with st.expander("1 · Start here", expanded=True):
+        st.markdown(
+            "1. **Run the demo.** On the **Experiment** tab, keep *Deterministic repair* and press **Run experiment**.\n"
+            "2. **Compare the three outcomes.** The three cards show the same task run by the original policy, "
+            "the original policy with a repeat guard, and the edited policy.\n"
+            "3. **Open the details.** Scroll down for the baseline trace, the proposed weight edit, "
+            "and the independent verification table with its verdict."
+        )
+
+    with st.expander("2 · Read the results"):
+        st.markdown(
+            "- **Baseline policy — Failed.** The agent keeps calling `check_status` after the job reports ready, "
+            "until its 10-action budget runs out. The trace marks each repeated step.\n"
+            "- **Baseline + repeat guard — Stopped.** A guard ends the run after 3 identical steps. "
+            "That saves wasted work, but the agent never fetched the result, so the task is **still incomplete**.\n"
+            "- **Edited policy — Completed correctly.** One output-layer weight was changed. "
+            "The agent fetches and returns the expected result, with no guard and the same budget.\n\n"
+            "Stopping a loop is not the same as finishing the task."
+        )
+
+    with st.expander("3 · Why a repair can be rejected"):
+        st.markdown(
+            "A repair must fix the failure **and** keep behaviour that already worked. "
+            "Choose **Negative control: rebalance** and run it:\n\n"
+            "- it fixes the demonstrated batch-job loop and the held-out batch case;\n"
+            "- but it takes weight away from interactive jobs, so both interactive regression cases now loop "
+            "until the budget runs out;\n"
+            "- the verifier reports **REGRESSION** and rejects the patch.\n\n"
+            "Other negative controls are rejected for returning the wrong result (*force return*), "
+            "fetching before the job is ready (*force fetch*), or exceeding the patch limits before any weight "
+            "is written (*excessive edit*)."
+        )
+
+    with st.expander("4 · Repair modes"):
+        st.markdown(
+            "- **Deterministic repair (default, offline).** A rule-based repair agent reads the failing trace and "
+            "the editable output-layer weights and computes one bounded numeric edit. No LLM is involved.\n"
+            "- **AI agent repair — local LLM (optional).** Sends the same inputs to a local Ollama model "
+            "(`ARL_OLLAMA_URL`, `ARL_OLLAMA_MODEL`). Its proposal goes through the same validation and verification.\n"
+            "- **If Ollama is unavailable,** the run shows *REPAIR AGENT FAILED — no proposal was produced; nothing "
+            "was substituted*. No deterministic result is shown under the LLM label.\n\n"
+            "Status: the LLM path is tested offline with simulated responses. A run against a live local model "
+            "has **not** been verified yet."
+        )
+
+    with st.expander("5 · Sources and documentation"):
+        st.markdown(
+            f"- Primary research — [*Sparks of Weight-Space Programming: LLMs can natively read & write neural "
+            f"network weights*]({RESEARCH_URL}) (Takehi, Teoh, Zhang, Khattab; preliminary research).\n"
+            f"- Video inspiration — [Code Cave, *ניתוח מוח פתוח: מה קורה כש-AI מתקן את המוח של AI אחר?*]({VIDEO_URL})\n"
+            f"- Project documentation — [{REPO_URL}/tree/main/docs]({REPO_URL}/tree/main/docs)\n\n"
+            "Agent Repair Lab is a separate small-policy experiment inspired by that research. "
+            "It does not reproduce the researchers' results; its own measurements are shown on the Experiment tab."
+        )
+
+
+with tab_experiment:
+    if report:
+        render(report)
+    else:
+        st.info("Press **Run experiment** to reproduce the loop, propose a repair and verify it.")
+
+with tab_help:
+    render_help()
 
 st.divider()
 st.caption(CREDIT)
